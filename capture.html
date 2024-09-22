@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Camera Capture for Size Recommendation</title>
+    <style>
+      #video {
+        width: 100%;
+        max-width: 400px;
+      }
+      #canvas {
+        display: none;
+      }
+      #result {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Capture Photo for Size Recommendation</h2>
+
+    <div>
+      <video id="video" autoplay></video>
+      <button id="capture">Capture Photo</button>
+      <canvas id="canvas" width="400" height="300"></canvas>
+      <button id="upload" style="display: none">Upload Photo</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+      // Access the camera
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+      const captureButton = document.getElementById("capture");
+      const uploadButton = document.getElementById("upload");
+      const resultDiv = document.getElementById("result");
+
+      // Ask for camera permission and stream video
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((err) => {
+          console.error("Error accessing the camera:", err);
+          alert("Could not access the camera. Please check your permissions.");
+        });
+
+      // Capture image when button is clicked
+      captureButton.addEventListener("click", () => {
+        // Draw the video frame on canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.style.display = "block";
+        // Show the upload button after capture
+        uploadButton.style.display = "block";
+      });
+
+      // Upload the captured image
+      uploadButton.addEventListener("click", () => {
+        canvas.toBlob((blob) => {
+          const formData = new FormData();
+          formData.append("file", blob, "captured_image.png");
+
+          // Show loading message
+          resultDiv.innerHTML = "<p>Processing image, please wait...</p>";
+
+          fetch("/process_image", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                resultDiv.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+              } else {
+                resultDiv.innerHTML = `
+                            <h3>Recommended Size: ${data.recommended_size}</h3>
+                            <p>Waist: ${data.waist.toFixed(2)} cm</p>
+                            <p>Chest: ${data.chest.toFixed(2)} cm</p>
+                        `;
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              resultDiv.innerHTML = `<p style="color:red;">An error occurred while processing the image.</p>`;
+            });
+        });
+      });
+    </script>
+  </body>
+</html>

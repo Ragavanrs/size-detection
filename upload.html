@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Size Calculation</title>
+  </head>
+  <body>
+    <h1>Capture Image for Size Calculation</h1>
+
+    <video id="video" width="640" height="480" autoplay></video>
+    <br />
+    <button id="snap">Capture</button>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <br />
+    <form id="upload-form" method="post" enctype="multipart/form-data">
+      <input type="file" id="image-file" accept="image/*" capture="camera" />
+      <input type="submit" value="Upload" />
+    </form>
+    <div id="result"></div>
+
+    <script>
+      // Access the camera and capture video feed
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+      const snapButton = document.getElementById("snap");
+
+      // Request access to the user's webcam
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then(function (stream) {
+          video.srcObject = stream;
+        })
+        .catch(function (err) {
+          console.log("Error accessing webcam: " + err);
+        });
+
+      // Capture the video frame and draw it on the canvas
+      snapButton.addEventListener("click", function () {
+        context.drawImage(video, 0, 0, 640, 480);
+      });
+
+      // Image upload and processing
+      const uploadForm = document.getElementById("upload-form");
+      uploadForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        const formData = new FormData();
+        const imageFile = document.getElementById("image-file").files[0];
+        formData.append("file", imageFile);
+
+        fetch("/process_image", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.error) {
+              document.getElementById(
+                "result"
+              ).innerHTML = `Error: ${data.error}`;
+            } else {
+              document.getElementById("result").innerHTML = `
+                        Width: ${data.width_mm} mm<br>
+                        Height: ${data.height_mm} mm<br>
+                        Suggested Size: ${data.size}
+                    `;
+            }
+          })
+          .catch((err) => console.error("Error:", err));
+      });
+    </script>
+  </body>
+</html>

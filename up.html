@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Camera Capture for Size Recommendation</title>
+    <style>
+      #video {
+        width: 100%;
+        max-width: 400px;
+      }
+      #canvas {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Capture Photo for Size Recommendation</h2>
+
+    <div>
+      <video id="video" autoplay></video>
+      <button id="capture">Capture Photo</button>
+      <canvas id="canvas" width="400" height="300"></canvas>
+      <button id="upload" style="display: none">Upload Photo</button>
+    </div>
+
+    <script>
+      // Access the camera
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+      const captureButton = document.getElementById("capture");
+      const uploadButton = document.getElementById("upload");
+
+      // Ask for camera permission and stream video
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((err) => {
+          console.error("Error accessing the camera:", err);
+        });
+
+      // Capture image when button is clicked
+      captureButton.addEventListener("click", () => {
+        // Draw the video frame on canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Show the upload button after capture
+        uploadButton.style.display = "block";
+      });
+
+      // Upload the captured image
+      uploadButton.addEventListener("click", () => {
+        canvas.toBlob((blob) => {
+          const formData = new FormData();
+          formData.append("file", blob, "captured_image.png");
+
+          fetch("/", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                alert(data.error);
+              } else {
+                alert(
+                  `Waist: ${data.waist} cm, Chest: ${data.chest} cm, Recommended Size: ${data.recommended_size}`
+                );
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+            });
+        });
+      });
+    </script>
+  </body>
+</html>
